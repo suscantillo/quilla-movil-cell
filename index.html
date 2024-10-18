@@ -3,63 +3,111 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Device Location Demo</title>
+    <title>Location Tracking with Updates</title>
     <style>
         body {
             font-family: Arial, sans-serif;
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
+            min-height: 100vh;
             margin: 0;
-            background-color: #f0f0f0;
+            background-color: #ff0000;
         }
         #location-display {
             background-color: white;
             padding: 20px;
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            max-width: 400px;
+            width: 100%;
+        }
+        #updates {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #ccc;
+            padding: 10px;
+            margin-top: 10px;
+        }
+        .update-item {
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
         }
     </style>
 </head>
 <body>
     <div id="location-display">
-        <h1>Your Location</h1>
-        <p id="status">Waiting for permission...</p>
-        <p id="latitude"></p>
-        <p id="longitude"></p>
-        <button onclick="getLocation()">Get My Location</button>
+        <h1>Cristian</h1>
+        <p id="status">Click start to begin tracking</p>
+        <button onclick="startTracking()">Start Tracking</button>
+        <button onclick="stopTracking()">Stop Tracking</button>
+        <div id="updates"></div>
     </div>
 
     <script>
-        function getLocation() {
-            document.getElementById('status').textContent = 'Requesting location...';
+        let watchId;
+        let updateInterval;
+
+        function startTracking() {
             if ("geolocation" in navigator) {
-                navigator.geolocation.getCurrentPosition(
-                    function(position) {
-                        var latitude = position.coords.latitude;
-                        var longitude = position.coords.longitude;
-                        document.getElementById('status').textContent = 'Location found!';
-                        document.getElementById('latitude').textContent = 'Latitude: ' + latitude;
-                        document.getElementById('longitude').textContent = 'Longitude: ' + longitude;
-                        
-                        // Here you can add code to send the location to your backend
-                        // For example:
-                        // sendToBackend(latitude, longitude);
-                    },
-                    function(error) {
-                        document.getElementById('status').textContent = 'Error: ' + error.message;
-                    }
+                document.getElementById('status').textContent = 'Tracking started...';
+                
+                watchId = navigator.geolocation.watchPosition(
+                    updatePosition,
+                    handleError,
+                    { enableHighAccuracy: true, maximumAge: 0 }
                 );
+
+                updateInterval = setInterval(displayUpdate, 5000);
             } else {
                 document.getElementById('status').textContent = 'Geolocation is not supported by this browser.';
             }
         }
 
-        // Example function to send data to backend (you would need to implement this)
-        function sendToBackend(lat, lon) {
-            // Use fetch or another method to send data to your server
-            console.log("Sending to backend: ", lat, lon);
+        function stopTracking() {
+            if (watchId) {
+                navigator.geolocation.clearWatch(watchId);
+                clearInterval(updateInterval);
+                document.getElementById('status').textContent = 'Tracking stopped';
+            }
+        }
+
+        let lastPosition = null;
+
+        function updatePosition(position) {
+            lastPosition = position;
+        }
+
+        function displayUpdate() {
+            if (lastPosition) {
+                let latitude = lastPosition.coords.latitude;
+                let longitude = lastPosition.coords.longitude;
+                let timestamp = new Date().toLocaleTimeString();
+
+                let updateItem = document.createElement("div")
+                updateItem.className = 'update-item';
+                updateItem.innerHTML = `
+                    <strong>${timestamp}</strong><br>
+                    Latitude: ${latitude.toFixed(6)}<br>
+                    Longitude: ${longitude.toFixed(6)}
+                `;
+
+                let updates = document.getElementById('updates');
+                updates.insertBefore(updateItem, updates.firstChild);
+
+                // Limit the number of displayed updates
+                if (updates.children.length > 10) {
+                    updates.removeChild(updates.lastChild);
+                }
+
+                console.log("Update sent:", timestamp, latitude, longitude);
+                // Here you would typically send the data to your backend
+            }
+        }
+
+        function handleError(error) {
+            document.getElementById('status').textContent = 'Error: ' + error.message;
         }
     </script>
 </body>
