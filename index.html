@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Device Location Demo</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+        }
+        #location-display {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+    <div id="location-display">
+        <h1>Your Location</h1>
+        <p id="status">Waiting for permission...</p>
+        <p id="latitude"></p>
+        <p id="longitude"></p>
+        <button onclick="getLocation()">Get My Location</button>
+    </div>
+
+    <script>
+        function getLocation() {
+            document.getElementById('status').textContent = 'Requesting location...';
+            if ("geolocation" in navigator) {
+                navigator.geolocation.getCurrentPosition(
+                    function(position) {
+                        var latitude = position.coords.latitude;
+                        var longitude = position.coords.longitude;
+                        document.getElementById('status').textContent = 'Location found!';
+                        document.getElementById('latitude').textContent = 'Latitude: ' + latitude;
+                        document.getElementById('longitude').textContent = 'Longitude: ' + longitude;
+                        
+                        // Here you can add code to send the location to your backend
+                        // For example:
+                        // sendToBackend(latitude, longitude);
+                    },
+                    function(error) {
+                        document.getElementById('status').textContent = 'Error: ' + error.message;
+                    }
+                );
+            } else {
+                document.getElementById('status').textContent = 'Geolocation is not supported by this browser.';
+            }
+        }
+
+        // Example function to send data to backend (you would need to implement this)
+        function sendToBackend(lat, lon) {
+            // Use fetch or another method to send data to your server
+            console.log("Sending to backend: ", lat, lon);
+        }
+    </script>
+</body>
+</html>
