@@ -34,24 +34,56 @@
             padding-bottom: 10px;
             border-bottom: 1px solid #eee;
         }
+        .success { color: green; }
+        .error { color: red; }
     </style>
 </head>
 <body>
     <div id="location-display">
-        <h1>Cristian</h1>
-        <p id="status">Click start to begin tracking</p>
-        <button onclick="startTracking()">Start Tracking</button>
-        <button onclick="stopTracking()">Stop Tracking</button>
+        <h1>Rastreador de ubicación</h1>
+        <p id="status">Haga clic en Iniciar para comenzar el rastreo</p>
+        <button onclick="startTracking()">Iniciar rastreo</button>
+        <button onclick="stopTracking()">Detener rastreo</button>
+        <p id="serverStatus"></p>
         <div id="updates"></div>
     </div>
 
     <script>
         let watchId;
         let updateInterval;
+        const API_URL = 'https://quilla-movil-api-production.up.railway.app'; // Cambia esto a tu URL de Railway en producción
+
+        async function sendLocationToServer(latitude, longitude, timestamp) {
+            try {
+                const response = await fetch(`${API_URL}/update_location`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        latitude: latitude,
+                        longitude: longitude,
+                        timestamp: timestamp
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const result = await response.json();
+                document.getElementById('serverStatus').textContent = 'Datos enviados correctamente';
+                document.getElementById('serverStatus').className = 'success';
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('serverStatus').textContent = 'Error al enviar datos: ' + error.message;
+                document.getElementById('serverStatus').className = 'error';
+            }
+        }
 
         function startTracking() {
             if ("geolocation" in navigator) {
-                document.getElementById('status').textContent = 'Tracking started...';
+                document.getElementById('status').textContent = 'Rastreo iniciado...';
                 
                 watchId = navigator.geolocation.watchPosition(
                     updatePosition,
@@ -59,9 +91,9 @@
                     { enableHighAccuracy: true, maximumAge: 0 }
                 );
 
-                updateInterval = setInterval(displayUpdate, 5000);
+                updateInterval = setInterval(displayUpdate, 5000); // Actualiza cada 5 segundos
             } else {
-                document.getElementById('status').textContent = 'Geolocation is not supported by this browser.';
+                document.getElementById('status').textContent = 'La geolocalización no está soportada en este navegador.';
             }
         }
 
@@ -69,7 +101,8 @@
             if (watchId) {
                 navigator.geolocation.clearWatch(watchId);
                 clearInterval(updateInterval);
-                document.getElementById('status').textContent = 'Tracking stopped';
+                document.getElementById('status').textContent = 'Rastreo detenido';
+                document.getElementById('serverStatus').textContent = '';
             }
         }
 
@@ -79,35 +112,35 @@
             lastPosition = position;
         }
 
-        function displayUpdate() {
+        async function displayUpdate() {
             if (lastPosition) {
-                let latitude = lastPosition.coords.latitude;
-                let longitude = lastPosition.coords.longitude;
-                let timestamp = new Date().toLocaleTimeString();
+                const latitude = lastPosition.coords.latitude;
+                const longitude = lastPosition.coords.longitude;
+                const timestamp = new Date().toISOString();
 
-                let updateItem = document.createElement("div")
+                const updateItem = document.createElement("div");
                 updateItem.className = 'update-item';
                 updateItem.innerHTML = `
-                    <strong>${timestamp}</strong><br>
-                    Latitude: ${latitude.toFixed(6)}<br>
-                    Longitude: ${longitude.toFixed(6)}
+                    <strong>${new Date().toLocaleTimeString()}</strong><br>
+                    Latitud: ${latitude.toFixed(6)}<br>
+                    Longitud: ${longitude.toFixed(6)}
                 `;
 
-                let updates = document.getElementById('updates');
+                const updates = document.getElementById('updates');
                 updates.insertBefore(updateItem, updates.firstChild);
 
-                // Limit the number of displayed updates
                 if (updates.children.length > 10) {
                     updates.removeChild(updates.lastChild);
                 }
 
-                console.log("Update sent:", timestamp, latitude, longitude);
-                // Here you would typically send the data to your backend
+                await sendLocationToServer(latitude, longitude, timestamp);
             }
         }
 
         function handleError(error) {
             document.getElementById('status').textContent = 'Error: ' + error.message;
+            document.getElementById('serverStatus').textContent = 'Error al obtener ubicación: ' + error.message;
+            document.getElementById('serverStatus').className = 'error';
         }
     </script>
 </body>
